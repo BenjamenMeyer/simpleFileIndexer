@@ -98,6 +98,17 @@ command-line completion techniques such as:
 
 The only issue is the command-line limits.
 
+Running with Docker
+-------------------
+
+There is also a docker image available:
+
+.. code-block:: bash
+
+	# docker run -it benjamenmeyer/simplefileindexer:latest bash
+
+The image can be built using docker/Dockerfile in the repository.
+
 Architecture as Implemented
 ---------------------------
 
