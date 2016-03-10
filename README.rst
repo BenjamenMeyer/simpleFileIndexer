@@ -107,7 +107,33 @@ There is also a docker image available:
 
 	# docker run -it benjamenmeyer/simplefileindexer:latest bash
 
-The image can be built using docker/Dockerfile in the repository.
+Once inside the container, a test file is stored in /test-data and
+can be tested using:
+
+.. code-block:: bash
+
+	# ./simpleFileIndexer /test-data/*
+
+If no command is provided to docker, then it will run the program
+using the sample(s) it downloaded when building the docker image:
+
+.. code-block:: bash
+
+	# docker run -it benjamenmeyer/simplefileindexer:latest
+	Found file: /test-data/51353.txt.utf-8
+	Top 10 Words:
+			the - 570 times.
+			of - 322 times.
+			and - 261 times.
+			a - 231 times.
+			to - 225 times.
+			in - 162 times.
+			you - 125 times.
+			or - 103 times.
+			with - 98 times.
+			that - 95 times.
+
+The image can be built using ``docker/Dockerfile`` in the repository.
 
 Architecture as Implemented
 ---------------------------
