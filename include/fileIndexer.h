@@ -11,45 +11,76 @@
 
 #include <logger.h>
 
-// word count for a given result set (file or cumulative)
+//! Word Count Results
 typedef QMap<QString, uint64_t> WordCount;
+//! Delayed Word Count Result
 typedef QFuture<WordCount> FutureWordCount;
 
+/*! \brief File Processing Object
+ *
+ *  QObject to process the a file and generate the word counts
+ */
 class FileIndexer : QObject
-	{
-	Q_OBJECT
-	public:
-		FileIndexer(QStringList filesToAnalyze, QObject* _parent=NULL);
-		~FileIndexer();
+    {
+    Q_OBJECT
+    public:
+        /*! \brief Constructor
+         *
+         *  \param filesToAnalyze - the list of files to process
+         *  \param _parent - parent QObject
+         */
+        FileIndexer(QStringList filesToAnalyze, QObject* _parent=NULL);
+        /*! \brief Deconstructor
+         */
+        ~FileIndexer();
 
-	public Q_SLOTS:
-		// indexer instantiator
-		void runIndexer();
+    public Q_SLOTS:
+        /*! \brief Initialize the Indexer
+         *
+         *  Kickoff the indexing of all the files
+         */
+        void runIndexer();
 
-		// log capture from non-OO sources
-		void incomingMessage(QtMsgType _type, QString _msg);
+        /*! \brief Log Capture Interface
+         *
+         *  Capture log messages from non-object sources
+         *
+         *  \param _type - Message Type (f.e Debug, Info, etc)
+         *  \param _msg - Log Message
+         */
+        void incomingMessage(QtMsgType _type, QString _msg);
 
-	Q_SIGNALS:
-		// log to log file
-		void logMessage(QString _message);
+    Q_SIGNALS:
+        /*! \brief Log Interface
+         *
+         *  Send a message to the log
+         *
+         *  \param _message Log Message to be recorded
+         */
+        void logMessage(QString _message);
 
-		// ready to close the application
-		void close();
+        /*! \brief Ready for Application Termination
+         *
+         *  Signal that the processing is complete and all is
+         *  ready for the application to be terminated.
+         */
+        void close();
 
-	private:
-		// log file interface & thread
-		QThread logThread;
-		Logger theLog;
+    private:
+        //! Thread for recording the log data
+        QThread logThread;
+        //! Log Recorder
+        Logger theLog;
 
-		// results store
-		FutureWordCount anticipatedResults;
+        //! Cumulative Indexing Results
+        FutureWordCount anticipatedResults;
 
-		// list of files specified by the user
-		QStringList fileList;
+        //! List of files to be processed
+        QStringList fileList;
 
-	private Q_SLOTS:
-		// results calculator and output
-		void finalizeResults();
-	};
+    private Q_SLOTS:
+        //! Notification the results are available
+        void finalizeResults();
+    };
 
 #endif //FILE_INDEXER_H__

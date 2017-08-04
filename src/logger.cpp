@@ -46,7 +46,7 @@ void Logger::setLogFile(QString _filename)
 			// Text is used because some platforms (Windows) require it for best file interaction
 			// WriteOnly is used since the file will not be read by the application
 			// Append is used to allow the file to retain existing data
-			// Unbuffered is used to try to make sure all the data is written quickly just like stderr
+			// Unbuffered is used to try to make sure all the data is written quickly just like stderr so nothing is lost
 			if (logFile.open(QIODevice::Text|QIODevice::Append|QIODevice::WriteOnly|QIODevice::Unbuffered))
 				{
 				break;
@@ -67,6 +67,7 @@ void Logger::setLogFile(QString _filename)
 
 QString Logger::getLogFile() const
 	{
+    // return the filename of the active log file
 	return logFile.fileName();
 	}
 
