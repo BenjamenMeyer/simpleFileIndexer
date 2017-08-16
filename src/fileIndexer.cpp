@@ -5,14 +5,18 @@
 #include <fstream>
 #include <locale>
 #include <map>
+#include <strings.h>
 
 #include <QtGlobal>
 #include <qtconcurrentmap.h>
 
 #include <QDebug>
+#include <QFile>
 #include <QMultiMap>
+#include <QRegExp>
 #include <QTimer>
 
+//! instance pointer used for capturing log data
 static FileIndexer* instance = NULL;
 
 /*! \brief Log Capture Interface
@@ -32,46 +36,12 @@ void messageCapture(QtMsgType _type, const char* _msg)
         }
     }
 
-/*! \brief File Processing Logging
- *
- *  Convenience method for logging messages for a given file being processed
- *
- *  \param _filename - the filename being processed
- *  \param _message - the log message to be recorded
- */
 void resultDebugLog(QString _fileName, QString _message)
     {
     qDebug() << "File Name: " << _fileName << " - " << _message;
     }
 
-//! C++ locale that only allows A-Z, a-z, and 0-9 characters as the definition of a "word"
-struct alphanumeric : std::ctype<char>
-    {
-    alphanumeric() : std::ctype<char>(table_alphanumeric()) {}
-
-    static std::ctype_base::mask const* table_alphanumeric()
-        {
-        // start with an empty locale table
-        static std::vector<std::ctype_base::mask> localTable(std::ctype<char>::table_size, std::ctype_base::space);
-        // upper case A-Z
-        std::fill(&localTable['A'], &localTable['Z'], std::ctype_base::upper|std::ctype_base::alpha);
-        // lower case a-z
-        std::fill(&localTable['a'], &localTable['z'], std::ctype_base::lower|std::ctype_base::alpha);
-        // digits
-        std::fill(&localTable['0'], &localTable['9'], std::ctype_base::digit);
-        return &localTable[0];
-        }
-    };
-
-/*! \brief Increase the word count in the result
- *
- *  Convenience method for increading the count for a given word in the result
- *
- *  \param _results - result object to increase the count in
- *  \param wordToAdd - word the count is for
- *  \param _count - the count to increment by
- */
-void addWord(WordCount& _results, QString wordToAdd, uint64_t _count=1)
+void addWord(WordCount& _results, QString wordToAdd, uint64_t _count)
     {
     // case insensitive comparison to unify the word to a single case
     QString actualWord = wordToAdd.toLower();
@@ -87,64 +57,118 @@ void addWord(WordCount& _results, QString wordToAdd, uint64_t _count=1)
         }
     }
 
-/*! \brief Single File Word Indexing
- *
- *  Count the words in a given file
- *
- *  \param fileName - filename to process
- *
- *  \return WordCount object containing the counts of all words in the file
- */
 WordCount indexFile(QString fileName)
     {
     // results for the single file
     WordCount results;
 
+    // log which file is being processed
     resultDebugLog(fileName, QString("Received file for processing"));
 
-    std::ifstream inputData;
-    // use the locale to discard any undesired characters
-    // this has the effect of easily allowing one "word" to be read from the file at a time,
-    // and saving memory/cpu/resources in the parsing
-    inputData.imbue(std::locale(std::locale(), new alphanumeric()));
+    QFile inputData(fileName);
+    // buffer information
+    const unsigned int MAX_INPUT_BUFFER = 32768;
+    const unsigned int MAX_READ = MAX_INPUT_BUFFER - 1;
 
-    // open the file
-    inputData.open(fileName.toLatin1().data(), std::ifstream::in);
-    if (inputData.is_open() == true)
+    // attempt to open the file
+    if (inputData.open(QIODevice::ReadOnly|QIODevice::Text) == true)
         {
-        // word read in
-        std::string rawWord;
+        // processing buffer
+        QString totalBuffer;
 
-        // add words so long as one can be read in
-        while (inputData >> rawWord)
+        // read buffer
+        char buffer[MAX_INPUT_BUFFER];
+
+        // whether or not to consider a word that reaches the end of the
+        // buffer a word. If true, consider it a word and terminate; if
+        // false add more data and reprocess
+        bool empty_buffer = false;
+        do
             {
-            // increase the count by 1 for each word read
-            addWord(results, QString::fromStdString(rawWord));
-            }
+            // prevent data leakage
+            bzero(buffer, MAX_INPUT_BUFFER);
 
-        // close the file
-        inputData.close();
+            // always read one less than the buffer size, ensuring
+            // a zero termination string
+            qint64 dataRead = inputData.read(buffer, MAX_READ);
 
-        qDebug() << "Completed processing " << fileName;
+            resultDebugLog(fileName, QString("Read %1 additional bytes").arg(dataRead));
+
+            // -1 -> error, 0 = EOF
+            empty_buffer = (dataRead <= 0);
+
+            // add the new data to the buffer
+            totalBuffer += QString::fromLatin1(buffer);
+
+            // count all words in the buffer
+            processBuffer(fileName, totalBuffer, empty_buffer, results);
+
+            resultDebugLog(fileName, QString("Remaining buffer size: %1 bytes").arg(totalBuffer.length()));
+
+            // continue so long as there is data in the file
+            } while (!empty_buffer);
         }
     else
         {
-        // the file could not be opened (permissions?) - record it so the user knows it was found
-        // but was unable to open it for processing
-        qDebug() << "Failed to open file \"" << fileName << "\"";
+        // error reading the file - nothing will be counted from it
+        resultDebugLog(fileName, QString("Unable to open file - no counts added"));
         }
 
+    // send the results back to MapReduce
     return results;
     }
 
-/*! \brief Word Count MapReduce Accumulator
- *
- *  MapReduce splits out the processing between multiple workers. The accumulator combines the results
- *  back into a single result
- *
- *  \param _results - the final result object
- *  \param fileResult - the individual file results
- */
+void processBuffer(const QString& fileName, QString& buffer, bool allow_ending_word, WordCount& results)
+    {
+    // regular expression matching
+    QRegExp wordMatcher(
+        "[A-Za-z0-9]+",            // pattern - AZa-z0-9; letters with accents won't be counted
+        Qt::CaseInsensitive,    // case sensitivity
+        QRegExp::RegExp2        // pattern syntax type (Qt5 default, PERL like-greedy)
+    );
+    // now process the buffer
+    bool process_buffer = true;
+    while (process_buffer)
+        {
+        // test the buffer to see if any matches occur
+        int matchIndex = wordMatcher.indexIn(buffer);
+        if ( matchIndex == -1)
+            {
+            // note: this means there are zero remaining matches in the buffer
+            //    thus the entire buffer can be tossed
+            resultDebugLog(fileName, QString("No more matches - clearing buffer"));
+            buffer.clear();
+
+            // terminate the loop
+            process_buffer = false;
+            }
+        else
+            {
+            // grab the single word from the buffer
+            QString wordRead = wordMatcher.cap(0);
+
+            // check if the word goes to the end of the buffer
+            if ((wordRead.length() + matchIndex) == buffer.length())
+                {
+                // at the end of the buffer
+                // does the word count as a word, or is more data needed
+                if (!allow_ending_word)
+                    {
+                    // more data is required...
+                    process_buffer = false;
+                    break;
+                    }
+                }
+
+            // increase the count by 1 for each word read
+            addWord(results, wordRead);
+
+            // remove the word from the buffer
+            buffer.remove(0, wordRead.length() + matchIndex);
+            }
+        };
+    }
+
 void indexFileReducer(WordCount& _results, const WordCount& fileResult)
     {
     // Note: There is no guarantee which file will give its results back first as this is completely asynchronous
