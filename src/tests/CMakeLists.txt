@@ -8,10 +8,12 @@ SET (THE_SOURCE_DIR ..)
 # except skip the `main.cpp` from the source listing
 # since that won't be used for the unit tests as it is
 # just the entry point for the rest of the program
-FILE(GLOB header_files ${THE_INCLUDE_DIR}/*.h)
-FILE(GLOB source_files ${THE_SOURCE_DIR}/*.cpp)
-FILE(REMOVE source_files main.cpp)
-SET (SOURCES ${source_files} ${header_files})
+FILE(GLOB primary_header_files ${THE_INCLUDE_DIR}/*.h)
+# manually set the source files b/c otherwise it grabs main.cpp
+# which then causes linker issues and CMake provides no easy
+# way to otherwise remove it from the listing
+SET (primary_source_files ${THE_SOURCE_DIR}/fileIndexer.cpp ${THE_SOURCE_DIR}/logger.cpp)
+SET (PRIMARY_SOURCES ${primary_source_files} ${primary_header_files})
 
 # find all the unit test files
 FILE(GLOB test_files *.cpp)
@@ -29,7 +31,7 @@ foreach(test_file IN LISTS test_files)
 	string(REPLACE ".cpp" "" test_name ${test_name})
 	MESSAGE(STATUS "	name: ${test_name} - file ${test_file}")
 
-	ADD_EXECUTABLE(${test_name} ${test_file} ${SOURCES})
+	ADD_EXECUTABLE(${test_name} ${test_file} ${PRIMARY_SOURCES})
 	TARGET_LINK_LIBRARIES(${test_name} ${QT_QTTEST_LIBRARY} ${QT_LIBRARIES})
 	ADD_TEST(NAME ${test_name} COMMAND ${test_name})
 
