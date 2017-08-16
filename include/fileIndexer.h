@@ -29,6 +29,7 @@ void resultDebugLog(QString _fileName, QString _message);
 /*! \brief Increase the word count in the result
  *
  *  Convenience method for increading the count for a given word in the result
+ *  All words are referenced in their lowercase form.
  *
  *  \param _results - result object to increase the count in
  *  \param wordToAdd - word the count is for

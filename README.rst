@@ -76,6 +76,7 @@ Building the software can be achieved via the following:
 	$ cd build
 	$ cmake ../src
 	$ make
+	$ make test
 
 Running
 -------
