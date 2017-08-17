@@ -66,17 +66,17 @@ On a Debian system, this can be achieved via the following:
 
 .. code-block:: bash
 
-	$ sudo apt-get install build-essential qt4-dev cmake
+    $ sudo apt-get install build-essential qt4-dev cmake
 
 Building the software can be achieved via the following:
 
 .. code-block:: bash
 
-	$ mkdir build
-	$ cd build
-	$ cmake ../src
-	$ make
-	$ make test
+    $ mkdir build
+    $ cd build
+    $ cmake ../src
+    $ make
+    $ make test
 
 Running
 -------
@@ -85,7 +85,7 @@ Once built, the program is run from its build directory via the following:
 
 .. code-block:: bash
 
-	$ ./simpleFileIndexer <file #1> <file #2> ...
+    $ ./simpleFileIndexer <file #1> <file #2> ...
 
 At present, each argument to the program is a file to be processed for
 word counts.
@@ -96,9 +96,39 @@ command-line completion techniques such as:
 
 .. code-block:: bash
 
-	$ ./simpleFileIndexer ../test-data/*
+    $ ./simpleFileIndexer ../test-data/*
 
 The only issue is the command-line limits.
+
+Building with Docker Compose
+----------------------------
+
+The `docker-compose` tool can be used to build a docker container
+and test the functionality. This is as simple as:
+
+.. code-block:: bash
+
+    # docker-compose build
+
+This will automatically run one instance of the test. This test
+can be repeated by simply running the container:
+
+.. code-block:: bash
+
+    # docker-compose run indexer
+    Creating network "simplefileindexer_default" with the default driver
+    Found file: /test-data/51353.txt.utf-8
+    Top 10 Words:
+            the - 573 times.
+            of - 322 times.
+            and - 262 times.
+            a - 232 times.
+            to - 231 times.
+            in - 164 times.
+            you - 125 times.
+            or - 103 times.
+            with - 99 times.
+            gutenberg - 96 times.
 
 Running with Docker
 -------------------
@@ -107,33 +137,34 @@ There is also a docker image available:
 
 .. code-block:: bash
 
-	# docker run -it benjamenmeyer/simplefileindexer:latest bash
+    # docker run -it benjamenmeyer/simplefileindexer:regex bash
 
 Once inside the container, a test file is stored in /test-data and
 can be tested using:
 
 .. code-block:: bash
 
-	# ./simpleFileIndexer /test-data/*
+    # ./simpleFileIndexer /test-data/*
 
 If no command is provided to docker, then it will run the program
 using the sample(s) it downloaded when building the docker image:
 
 .. code-block:: bash
 
-	# docker run -it benjamenmeyer/simplefileindexer:latest
-	Found file: /test-data/51353.txt.utf-8
-	Top 10 Words:
-			the - 570 times.
-			of - 322 times.
-			and - 261 times.
-			a - 231 times.
-			to - 225 times.
-			in - 162 times.
-			you - 125 times.
-			or - 103 times.
-			with - 98 times.
-			that - 95 times.
+    # docker run -it benjamenmeyer/simplefileindexer:latest
+    Found file: /test-data/51353.txt.utf-8
+    Top 10 Words:
+            the - 573 times.
+            of - 322 times.
+            and - 262 times.
+            a - 232 times.
+            to - 231 times.
+            in - 164 times.
+            you - 125 times.
+            or - 103 times.
+            with - 99 times.
+            gutenberg - 96 times.
+
 
 The image can be built using ``docker/Dockerfile`` in the repository.
 
