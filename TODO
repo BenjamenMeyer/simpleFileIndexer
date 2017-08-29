@@ -1,0 +1,20 @@
+TODO
+====
+
+- Add Docker Compose support
+- Cleanup the Dockerfile
+X Add CTest
+X Add Unit Tests
+X Add Doxygen compatible documentation to the headers
+- Try adding documentation generation
+- cleanup
+  - Docker Image - Update
+  - Parameters - unify formatting
+  - camelCase unity
+  - underscore unity
+  - Dockerfile - whitespace, comments, etc
+  - Add graph to show shutdown process, comments to explain design and why logger initiates it
+  - Regex version: Add comments on the buffer processing for why it never runs out of buffer or misses
+     -> process buffer regex usage vs file reading buffer
+
+Note: do a python version for next time (if there is a next time)
