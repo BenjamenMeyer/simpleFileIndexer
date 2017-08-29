@@ -66,7 +66,7 @@ On a Debian system, this can be achieved via the following:
 
 .. code-block:: bash
 
-    $ sudo apt-get install build-essential qt4-dev cmake
+    $ sudo apt-get install build-essential libqt4-dev cmake
 
 Building the software can be achieved via the following:
 
